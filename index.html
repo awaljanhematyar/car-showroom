@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="description" content="Jan Motor Showroom Management System" />
+    <title>Jan Motor Showroom</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="login-screen" class="login-screen"></div>
+    <div id="toast-root" class="toast-root" aria-live="polite"></div>
+    <div id="modal-root"></div>
+    <div id="app-shell" class="app-shell hidden">
+      <aside id="sidebar" class="sidebar" aria-label="Main navigation">
+        <div class="sidebar-brand">
+          <div class="brand-mark">JM</div>
+          <div class="brand-copy">
+            <strong id="sidebar-showroom-name">Jan Motor Showroom</strong
+            ><span>Admin Management</span>
+          </div>
+          <button
+            id="sidebar-collapse"
+            class="icon-btn"
+            aria-label="Collapse sidebar">
+            ‹
+          </button>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="#dashboard" data-route="dashboard"
+            ><span class="nav-icon">⌂</span
+            ><span class="nav-label">Dashboard</span></a
+          >
+          <a href="#cars" data-route="cars"
+            ><span class="nav-icon">🚘</span
+            ><span class="nav-label">Cars</span></a
+          >
+          <a href="#car-list" data-route="car-list"
+            ><span class="nav-icon">☷</span
+            ><span class="nav-label">List of Cars</span></a
+          >
+          <a href="#add-car" data-route="add-car"
+            ><span class="nav-icon">＋</span
+            ><span class="nav-label">Add Car</span></a
+          >
+          <a href="#repairs" data-route="repairs"
+            ><span class="nav-icon">🔧</span
+            ><span class="nav-label">Repairs</span></a
+          >
+          <a href="#expenses" data-route="expenses"
+            ><span class="nav-icon">◈</span
+            ><span class="nav-label">Expenses</span></a
+          >
+          <a href="#reports" data-route="reports"
+            ><span class="nav-icon">▥</span
+            ><span class="nav-label">Reports</span></a
+          >
+          <a href="#settings" data-route="settings"
+            ><span class="nav-icon">⚙</span
+            ><span class="nav-label">Settings</span></a
+          >
+        </nav>
+        <div class="sidebar-user">
+          <div class="avatar">AD</div>
+          <div class="user-copy">
+            <strong>Showroom Admin</strong><span>Administrator</span>
+          </div>
+          <button id="logout-btn" class="logout-btn" title="Logout">↪</button>
+        </div>
+      </aside>
+      <div id="mobile-overlay" class="mobile-overlay"></div>
+      <main class="main-shell">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button
+              id="mobile-menu"
+              class="icon-btn mobile-menu"
+              aria-label="Open navigation">
+              ☰
+            </button>
+            <div>
+              <div id="breadcrumb" class="breadcrumb">Dashboard</div>
+              <h1 id="page-title">Dashboard</h1>
+            </div>
+          </div>
+          <div class="topbar-right">
+            <div class="admin-pill">ADMIN</div>
+            <div class="top-avatar">AD</div>
+          </div>
+        </header>
+        <section id="app" class="page-content" tabindex="-1"></section>
+      
+</main>
+    </div>
+    <script src="js/storage.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/toast.js"></script>
+    <script src="js/modal.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
