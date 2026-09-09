@@ -885,6 +885,8 @@ const App = (() => {
       location: "Kabul",
       destination: "",
       firstLocation: "",
+      container: "",
+      chassisNumber: "",
       vin: "",
       customerName: "",
       date: today(),
@@ -971,6 +973,21 @@ const App = (() => {
                 <input
                   name="vin"
                   value="${esc(c.vin || "")}"
+                >
+
+              </div>
+
+
+              <div class="field">
+
+                <label>
+                  Chassis Number
+                </label>
+
+                <input
+                  name="chassisNumber"
+                  placeholder="Chassis number"
+                  value="${esc(c.chassisNumber || "")}"
                 >
 
               </div>
@@ -1179,6 +1196,21 @@ const App = (() => {
                 <input
                   name="destination"
                   value="${esc(c.destination || "")}"
+                >
+
+              </div>
+
+
+              <div class="field">
+
+                <label>
+                  Container
+                </label>
+
+                <input
+                  name="container"
+                  placeholder="Container number"
+                  value="${esc(c.container || "")}"
                 >
 
               </div>
@@ -1654,6 +1686,8 @@ const App = (() => {
 
         vin: data.vin.trim(),
 
+        chassisNumber: (data.chassisNumber || "").trim(),
+
         brand: data.brand,
 
         model: data.model.trim(),
@@ -1675,6 +1709,8 @@ const App = (() => {
         firstLocation: data.firstLocation.trim(),
 
         destination: data.destination.trim(),
+
+        container: (data.container || "").trim(),
 
         date: data.date,
 
@@ -1847,889 +1883,275 @@ const App = (() => {
   ========================================== */
 
   function carListPage() {
-    const cars = Storage.getCars()
+    let cars = Storage.getCars()
       .slice()
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     /* ==========================================
-       SEARCH & FILTERS
+       VEHICLE LISTINGS — PILL / ROW HELPERS
     ========================================== */
 
-    const filterMarkup = `
+    const vlPill = (isYes) =>
+      `<span class="vl-pill ${isYes ? "vl-pill-yes" : "vl-pill-no"}">${
+        isYes ? "Yes" : "No"
+      }</span>`;
 
-      <section
-        class="car-list-filters"
-        id="car-list-filters"
-      >
+    const vlSearchIndex = (c) => {
+      const delivered =
+        c.delivery?.status === "Delivered" || c.status === "Delivered";
+      const damaged =
+        c.damage?.damaged === "Yes" ||
+        c.damage?.damaged === true ||
+        c.status === "Damaged";
+      const titleReceived = c.condition?.["Title Received"] === "Yes";
 
-        <div
-          class="
-            car-filter-group
-            car-search-group
-          "
+      return [
+        date(c.date || c.createdAt),
+        c.vin,
+        c.chassisNumber,
+        c.brand,
+        c.model,
+        c.year,
+        c.status,
+        c.destination,
+        c.firstLocation,
+        c.location,
+        c.container,
+        delivered ? "delivered yes" : "not delivered no",
+        damaged ? "damaged yes" : "not damaged no",
+        titleReceived ? "title received yes" : "title not received no",
+      ]
+        .join(" ")
+        .toLowerCase();
+    };
+
+    const vlRow = (c) => {
+      const delivered =
+        c.delivery?.status === "Delivered" || c.status === "Delivered";
+
+      const damaged =
+        c.damage?.damaged === "Yes" ||
+        c.damage?.damaged === true ||
+        c.status === "Damaged";
+
+      const titleReceived = c.condition?.["Title Received"] === "Yes";
+
+      return `
+        <tr
+          class="vl-row"
+          tabindex="0"
+          onclick="if(!event.target.closest('button')){Navigation.go('car/${c.id}')}"
+          onkeydown="if((event.key==='Enter'||event.key===' ')&&!event.target.closest('button')){event.preventDefault();Navigation.go('car/${c.id}')}"
         >
-
-          <label
-            for="car-search"
-          >
-            Search
-          </label>
-
-          <input
-            type="search"
-            id="car-search"
-            placeholder="
-              Search VIN, model or customer name...
-            "
-            autocomplete="off"
-          >
-
-        </div>
-
-
-        <div class="car-filter-group">
-
-          <label
-            for="filter-vin"
-          >
-            VIN
-          </label>
-
-          <input
-            type="text"
-            id="filter-vin"
-            placeholder="VIN"
-          >
-
-        </div>
-
-
-        <div class="car-filter-group">
-
-          <label
-            for="filter-model"
-          >
-            Model
-          </label>
-
-          <input
-            type="text"
-            id="filter-model"
-            placeholder="Model"
-          >
-
-        </div>
-
-
-        <div class="car-filter-group">
-
-          <label
-            for="filter-status"
-          >
-            Status
-          </label>
-
-          <select
-            id="filter-status"
-          >
-
-            <option value="">
-              All Statuses
-            </option>
-
-            <option value="Available">
-              Available
-            </option>
-
-            <option value="Delivered">
-              Delivered
-            </option>
-
-            <option value="Sold">
-              Sold
-            </option>
-
-            <option value="Damaged">
-              Damaged
-            </option>
-
-          </select>
-
-        </div>
-
-
-        <div class="car-filter-group">
-
-          <label
-            for="filter-destination"
-          >
-            Destination
-          </label>
-
-          <input
-            type="text"
-            id="filter-destination"
-            placeholder="Destination"
-          >
-
-        </div>
-
-
-        <div class="car-filter-group">
-
-          <label
-            for="filter-location"
-          >
-            First Location
-          </label>
-
-          <input
-            type="text"
-            id="filter-location"
-            placeholder="First Location"
-          >
-
-        </div>
-
-
-        <div class="car-filter-group">
-
-          <label
-            for="filter-date"
-          >
-            Date
-          </label>
-
-          <input
-            type="date"
-            id="filter-date"
-          >
-
-        </div>
-
-
-        <div class="car-filter-group">
-
-          <label
-            for="filter-damage"
-          >
-            Damage
-          </label>
-
-          <select
-            id="filter-damage"
-          >
-
-            <option value="">
-              All
-            </option>
-
-            <option value="yes">
-              Damaged
-            </option>
-
-            <option value="no">
-              Not Damaged
-            </option>
-
-          </select>
-
-        </div>
-
-
-        <div class="car-filter-group">
-
-          <label
-            for="filter-deliver"
-          >
-            Deliver
-          </label>
-
-          <select
-            id="filter-deliver"
-          >
-
-            <option value="">
-              All
-            </option>
-
-            <option value="yes">
-              Delivered
-            </option>
-
-            <option value="no">
-              Not Delivered
-            </option>
-
-          </select>
-
-        </div>
-
-
-        <div class="car-filter-actions">
-
-          <button
-            type="button"
-            class="
-              btn
-              btn-secondary
-            "
-            id="clear-car-filters"
-          >
-            Clear Filters
-          </button>
-
-
-          <button
-            type="button"
-            class="
-              btn
-              btn-primary
-            "
-            id="add-car-from-list"
-          >
-            Add Car
-          </button>
-
-        </div>
-
-      </section>
+          <td>${date(c.date || c.createdAt)}</td>
+
+          <td><span class="vl-vin">${esc(c.vin || "N/A")}</span></td>
+
+          <td><span class="vl-vin">${esc(c.chassisNumber || "N/A")}</span></td>
+
+          <td>
+            <div class="vl-model">
+              <strong>${esc(c.brand || "")} ${esc(c.model || "")}</strong>
+              <span>${c.year || "N/A"}</span>
+            </div>
+          </td>
+
+          <td>
+            <span class="badge ${
+              c.status === "Available"
+                ? "badge-available"
+                : c.status === "Delivered"
+                  ? "badge-progress"
+                  : damaged
+                    ? "vl-badge-danger"
+                    : "badge-sold"
+            }">${esc(c.status || "Available")}</span>
+          </td>
+
+          <td>${esc(c.destination || "N/A")}</td>
+
+          <td>${esc(c.firstLocation || "N/A")}</td>
+
+          <td>${esc(c.location || "N/A")}</td>
+
+          <td>${esc(c.container || "N/A")}</td>
+
+          <td>${vlPill(delivered)}</td>
+
+          <td>${vlPill(damaged)}</td>
+
+          <td>${vlPill(titleReceived)}</td>
+
+          <td>
+            <span class="vl-expenditure">${money(
+              c.finance?.totalExpenditure || repairCostForCar(c.id),
+            )}</span>
+          </td>
+
+          <td>
+            <img
+              class="vl-thumb"
+              src="${esc(c.images?.[0] || imageFallback)}"
+              alt="Vehicle"
+              onerror="this.src='${imageFallback}'"
+            >
+          </td>
+
+          <td>
+            <div class="vl-actions">
+              <button type="button" class="vl-action-btn vl-view" title="View" onclick="event.stopPropagation();Navigation.go('car/${c.id}')">👁</button>
+              <button type="button" class="vl-action-btn vl-edit" title="Edit" onclick="event.stopPropagation();App.editCar('${c.id}')">✎</button>
+              <button type="button" class="vl-action-btn vl-delete" title="Delete" onclick="event.stopPropagation();App.deleteCar('${c.id}')">🗑</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    };
+
+    const vlEmptyRow = () => `
+      <tr>
+        <td colspan="15">
+          <div class="empty-state">
+            <strong>No cars found</strong>
+            <span>Try a different search term.</span>
+          </div>
+        </td>
+      </tr>
     `;
 
-    /* ==========================================
-       ROW MARKUP
-    ========================================== */
-
-    const rowMarkup = (list) => {
-      if (!list.length) {
-        return `
-            <tr>
-
-              <td colspan="11">
-
-                <div class="empty-state">
-
-                  <strong>
-                    No cars found
-                  </strong>
-
-                  <span>
-                    Try changing your search or filters.
-                  </span>
-
-                </div>
-
-              </td>
-
-            </tr>
-          `;
-      }
-
-      return list
-        .map((c) => {
-          const delivered =
-            c.delivery?.status === "Delivered" || c.status === "Delivered";
-
-          const damaged =
-            c.damage?.damaged === "Yes" ||
-            c.damage?.damaged === true ||
-            c.status === "Damaged";
-
-          return `
-              <tr
-                class="car-list-row"
-                tabindex="0"
-
-                onclick="
-                  if (
-                    !event.target.closest(
-                      'button,a'
-                    )
-                  ) {
-                    App.viewCar(
-                      '${c.id}'
-                    );
-                  }
-                "
-
-                onkeydown="
-                  if (
-                    (
-                      event.key === 'Enter' ||
-                      event.key === ' '
-                    ) &&
-                    !event.target.closest(
-                      'button,a'
-                    )
-                  ) {
-
-                    event.preventDefault();
-
-                    App.viewCar(
-                      '${c.id}'
-                    );
-
-                  }
-                "
-              >
-
-
-                <td data-label="Date">
-
-                  ${date(c.date || c.createdAt)}
-
-                </td>
-
-
-                <td data-label="VIN">
-
-                  <strong>
-                    ${esc(c.vin || "N/A")}
-                  </strong>
-
-                </td>
-
-
-                <td data-label="Model">
-
-                  <div class="list-car">
-
-                    <img
-                      src="${esc(c.images?.[0] || imageFallback)}"
-                      alt="${esc(c.brand + " " + c.model)}"
-
-                      onerror="
-                        this.src='${imageFallback}'
-                      "
-                    >
-
-
-                    <div>
-
-                      <strong>
-                        ${esc(c.brand || "")}
-                        ${esc(c.model || "")}
-                      </strong>
-
-                      <span>
-                        ${c.year || "N/A"}
-                      </span>
-
-                    </div>
-
-                  </div>
-
-                </td>
-
-
-                <td data-label="Status">
-
-                  <span
-                    class="
-                      badge
-                      ${
-                        c.status === "Available"
-                          ? "badge-available"
-                          : c.status === "Delivered"
-                            ? "badge-progress"
-                            : damaged
-                              ? "badge-danger"
-                              : "badge-sold"
-                      }
-                    "
-                  >
-                    ${esc(c.status || "Available")}
-                  </span>
-
-                </td>
-
-
-                <td data-label="Destination">
-
-                  ${esc(c.destination || "N/A")}
-
-                </td>
-
-
-                <td data-label="First Location">
-
-                  ${esc(c.firstLocation || c.location || "N/A")}
-
-                </td>
-
-
-                <td data-label="Image">
-
-                  <img
-                    class="list-image"
-                    src="${esc(c.images?.[0] || imageFallback)}"
-                    alt="Vehicle image"
-
-                    onerror="
-                      this.src='${imageFallback}'
-                    "
-                  >
-
-                </td>
-
-
-                <td data-label="Deliver">
-
-                  <span
-                    class="
-                      table-state
-                      ${delivered ? "is-yes" : "is-no"}
-                    "
-                  >
-                    ${delivered ? "Delivered" : "Not Delivered"}
-                  </span>
-
-                </td>
-
-
-                <td data-label="Damage">
-
-                  <span
-                    class="
-                      table-state
-                      ${damaged ? "is-yes" : "is-no"}
-                    "
-                  >
-                    ${damaged ? "Damaged" : "Not Damaged"}
-                  </span>
-
-                </td>
-
-
-                <td data-label="Expenditure">
-
-                  ${money(
-                    c.finance?.totalExpenditure || repairCostForCar(c.id),
-                  )}
-
-                </td>
-
-
-                <td data-label="Actions">
-
-                  <div class="actions">
-
-                    <button
-                      class="
-                        btn
-                        btn-sm
-                      "
-                      onclick="
-                        event.stopPropagation();
-                        App.viewCar(
-                          '${c.id}'
-                        );
-                      "
-                    >
-                      View
-                    </button>
-
-
-                    <button
-                      class="
-                        btn
-                        btn-sm
-                      "
-                      onclick="
-                        event.stopPropagation();
-                        App.editCar(
-                          '${c.id}'
-                        );
-                      "
-                    >
-                      Edit
-                    </button>
-
-
-                    <button
-                      class="
-                        btn
-                        btn-sm
-                        btn-danger
-                      "
-                      onclick="
-                        event.stopPropagation();
-                        App.deleteCar(
-                          '${c.id}'
-                        );
-                      "
-                    >
-                      Delete
-                    </button>
-
-                  </div>
-
-                </td>
-
-              </tr>
-            `;
-        })
-        .join("");
-    };
+    const vlRowsMarkup = (list) =>
+      list.length ? list.map(vlRow).join("") : vlEmptyRow();
 
     /* ==========================================
        PAGE
     ========================================== */
 
     page(
-      "List of Cars",
+      "Vehicle Listings",
 
       `
-        ${filterMarkup}
-
-
         <div class="section-head">
-
           <div>
-
-            <h2>
-              List of Cars
-            </h2>
-
-            <p>
-              Click anywhere on a vehicle row
-              to open the complete vehicle record.
-            </p>
-
+            <h2>Vehicle Listings</h2>
+            <p>Click anywhere on a vehicle row to open the complete vehicle record.</p>
           </div>
 
+          <button class="btn btn-primary" onclick="Navigation.go('add-car')">＋ Add Car</button>
         </div>
 
+        <div class="vl-panel" id="vl-panel">
+          <div class="vl-header">
+            <div class="vl-header-left">
+              <span class="vl-header-icon">☷</span>
+              <span class="vl-header-title">List Of Vehicles</span>
+              <span class="vl-header-count" id="vl-count">${cars.length} Record${cars.length === 1 ? "" : "s"}</span>
+            </div>
 
-        <div class="panel">
-
-          <div class="panel-head">
-
-            <h3>
-              All Cars
-            </h3>
-
-            <span id="listing-count">
-
-              ${cars.length}
-              vehicle${cars.length === 1 ? "" : "s"}
-
-            </span>
-
+            <div class="vl-header-actions">
+              <button type="button" class="vl-icon-btn" id="vl-refresh" title="Refresh">↻</button>
+              <button type="button" class="vl-icon-btn" id="vl-fullscreen" title="Fullscreen">⛶</button>
+              <button type="button" class="vl-icon-btn" id="vl-close" title="Close">✕</button>
+            </div>
           </div>
 
+          <div class="vl-toolbar">
+            <div class="vl-search-group">
+              <label for="vl-search">Search In Table:</label>
+              <input type="search" id="vl-search" placeholder="Search VIN, model, status, location..." autocomplete="off">
+            </div>
 
-          <div
-            class="
-              table-wrap
-              car-list-table-wrap
-            "
-          >
+            <button type="button" class="vl-reload-btn" id="vl-reload">⟲ Reload</button>
+          </div>
 
-            <table
-              class="
-                data-table
-                car-list-table
-              "
-            >
-
+          <div class="vl-table-wrap" id="vl-table-wrap">
+            <table class="vl-table">
               <thead>
-
                 <tr>
-
-                  <th>
-                    Date
-                  </th>
-
-                  <th>
-                    VIN
-                  </th>
-
-                  <th>
-                    Model
-                  </th>
-
-                  <th>
-                    Status
-                  </th>
-
-                  <th>
-                    Destination
-                  </th>
-
-                  <th>
-                    First Location
-                  </th>
-
-                  <th>
-                    Image
-                  </th>
-
-                  <th>
-                    Deliver
-                  </th>
-
-                  <th>
-                    Damage
-                  </th>
-
-                  <th>
-                    Expenditure
-                  </th>
-
-                  <th>
-                    Actions
-                  </th>
-
+                  <th>Date</th>
+                  <th>VIN</th>
+                  <th>Chassis Number</th>
+                  <th>Model</th>
+                  <th>Status</th>
+                  <th>Destination</th>
+                  <th>First Location</th>
+                  <th>Current Location</th>
+                  <th>Container</th>
+                  <th>Deliver</th>
+                  <th>Damage</th>
+                  <th>Title Received</th>
+                  <th>Expenditure</th>
+                  <th>Picture</th>
+                  <th>Action</th>
                 </tr>
-
               </thead>
 
-
-              <tbody
-                id="car-list-results"
-              >
-                ${rowMarkup(cars)}
-              </tbody>
-
+              <tbody id="vl-results">${vlRowsMarkup(cars)}</tbody>
             </table>
-
           </div>
-
         </div>
       `,
     );
 
     /* ==========================================
-       FILTER STATE
+       LIVE SEARCH / RELOAD / REFRESH / FULLSCREEN / CLOSE
     ========================================== */
 
-    const state = {
-      search: "",
+    const resultsBody = document.getElementById("vl-results");
+    const countEl = document.getElementById("vl-count");
+    const searchInput = document.getElementById("vl-search");
 
-      vin: "",
-
-      model: "",
-
-      status: "",
-
-      destination: "",
-
-      firstLocation: "",
-
-      date: "",
-
-      damage: "",
-
-      deliver: "",
-    };
-
-    /* ==========================================
-       FILTER FIELD MAP
-    ========================================== */
-
-    const fields = {
-      "car-search": "search",
-
-      "filter-vin": "vin",
-
-      "filter-model": "model",
-
-      "filter-status": "status",
-
-      "filter-destination": "destination",
-
-      "filter-location": "firstLocation",
-
-      "filter-date": "date",
-
-      "filter-damage": "damage",
-
-      "filter-deliver": "deliver",
-    };
-
-    /* ==========================================
-       GET VALUE
-    ========================================== */
-
-    function getValue(car, keys) {
-      for (const key of keys) {
-        const value = key.split(".").reduce((obj, part) => obj?.[part], car);
-
-        if (value !== undefined && value !== null && value !== "") {
-          return String(value);
-        }
-      }
-
-      return "";
+    function renderRows(list) {
+      resultsBody.innerHTML = vlRowsMarkup(list);
+      countEl.textContent = `${list.length} Record${list.length === 1 ? "" : "s"}`;
     }
 
-    /* ==========================================
-       MATCH FILTERS
-       AND LOGIC
-    ========================================== */
-
-    function matches(car) {
-      const search = state.search.toLowerCase();
-
-      const searchable = [
-        getValue(car, ["vin"]),
-
-        getValue(car, ["model"]),
-
-        getValue(car, ["brand"]),
-
-        getValue(car, ["customerName", "customer.name", "customer"]),
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      if (search && !searchable.includes(search)) {
-        return false;
-      }
-
-      if (
-        state.vin &&
-        !getValue(car, ["vin"]).toLowerCase().includes(state.vin.toLowerCase())
-      ) {
-        return false;
-      }
-
-      if (
-        state.model &&
-        !getValue(car, ["model"])
-          .toLowerCase()
-          .includes(state.model.toLowerCase())
-      ) {
-        return false;
-      }
-
-      if (
-        state.destination &&
-        !getValue(car, ["destination"])
-          .toLowerCase()
-          .includes(state.destination.toLowerCase())
-      ) {
-        return false;
-      }
-
-      if (
-        state.firstLocation &&
-        !getValue(car, ["firstLocation", "location"])
-          .toLowerCase()
-          .includes(state.firstLocation.toLowerCase())
-      ) {
-        return false;
-      }
-
-      if (
-        state.status &&
-        getValue(car, ["status"]).toLowerCase() !== state.status.toLowerCase()
-      ) {
-        return false;
-      }
-
-      const carDate = getValue(car, ["date", "createdAt"]).slice(0, 10);
-
-      if (state.date && carDate !== state.date) {
-        return false;
-      }
-
-      const damaged =
-        car.damage?.damaged === "Yes" ||
-        car.damage?.damaged === true ||
-        car.status === "Damaged";
-
-      const delivered =
-        car.delivery?.status === "Delivered" || car.status === "Delivered";
-
-      if (state.damage && damaged !== (state.damage === "yes")) {
-        return false;
-      }
-
-      if (state.deliver && delivered !== (state.deliver === "yes")) {
-        return false;
-      }
-
-      return true;
+    function applySearch() {
+      const q = (searchInput.value || "").trim().toLowerCase();
+      const filtered = q
+        ? cars.filter((c) => vlSearchIndex(c).includes(q))
+        : cars;
+      renderRows(filtered);
     }
 
-    /* ==========================================
-       RENDER FILTERED RESULTS
-    ========================================== */
-
-    function renderResults() {
-      const filtered = cars.filter(matches);
-
-      const results = document.getElementById("car-list-results");
-
-      const count = document.getElementById("listing-count");
-
-      if (results) {
-        results.innerHTML = rowMarkup(filtered);
-      }
-
-      if (count) {
-        count.textContent = `${filtered.length} vehicle${
-          filtered.length === 1 ? "" : "s"
-        }`;
-      }
+    if (searchInput) {
+      searchInput.addEventListener("input", applySearch);
     }
 
-    /* ==========================================
-       CONNECT FILTER INPUTS
-    ========================================== */
-
-    Object.entries(fields).forEach(([id, stateKey]) => {
-      const input = document.getElementById(id);
-
-      if (!input) {
-        return;
-      }
-
-      input.addEventListener(
-        input.tagName === "SELECT" || input.type === "date"
-          ? "change"
-          : "input",
-
-        () => {
-          state[stateKey] = input.value.trim();
-
-          renderResults();
-        },
-      );
-    });
-
-    /* ==========================================
-       CLEAR FILTERS
-    ========================================== */
-
-    const clearButton = document.getElementById("clear-car-filters");
-
-    if (clearButton) {
-      clearButton.addEventListener("click", () => {
-        Object.keys(state).forEach((key) => (state[key] = ""));
-
-        Object.keys(fields).forEach((id) => {
-          const input = document.getElementById(id);
-
-          if (input) {
-            input.value = "";
-          }
-        });
-
-        renderResults();
+    const refreshButton = document.getElementById("vl-refresh");
+    if (refreshButton) {
+      refreshButton.addEventListener("click", () => {
+        cars = Storage.getCars()
+          .slice()
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        applySearch();
       });
     }
 
-    /* ==========================================
-       ADD CAR
-    ========================================== */
+    const reloadButton = document.getElementById("vl-reload");
+    if (reloadButton) {
+      reloadButton.addEventListener("click", () => {
+        cars = Storage.getCars()
+          .slice()
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        if (searchInput) searchInput.value = "";
+        renderRows(cars);
+        Toast.show("Vehicle list reloaded.", "info");
+      });
+    }
 
-    const addButton = document.getElementById("add-car-from-list");
+    const fullscreenButton = document.getElementById("vl-fullscreen");
+    const vlPanel = document.getElementById("vl-panel");
+    if (fullscreenButton && vlPanel) {
+      fullscreenButton.addEventListener("click", () => {
+        vlPanel.classList.toggle("vl-fullscreen");
+      });
+    }
 
-    if (addButton) {
-      addButton.addEventListener("click", () => Navigation.go("add-car"));
+    const closeButton = document.getElementById("vl-close");
+    if (closeButton) {
+      closeButton.addEventListener("click", () => {
+        Navigation.go("dashboard");
+      });
     }
   }
 
@@ -2939,10 +2361,30 @@ const App = (() => {
 
               <div>
                 <span>
+                  Container
+                </span>
+                <strong>
+                  ${esc(c.container || "N/A")}
+                </strong>
+              </div>
+
+
+              <div>
+                <span>
                   VIN
                 </span>
                 <strong>
                   ${esc(c.vin || "N/A")}
+                </strong>
+              </div>
+
+
+              <div>
+                <span>
+                  Chassis Number
+                </span>
+                <strong>
+                  ${esc(c.chassisNumber || "N/A")}
                 </strong>
               </div>
 
